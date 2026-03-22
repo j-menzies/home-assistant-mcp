@@ -1,0 +1,14 @@
+node_modules
+dist
+.env
+certs
+*.key
+*.crt
+*.csr
+*.pem
+.git
+.github
+docs
+scripts
+ARCHITECTURE.md
+README.md
