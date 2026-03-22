@@ -7,8 +7,8 @@ import { timingSafeEqual } from "node:crypto";
  * Uses timing-safe comparison to prevent timing attacks.
  */
 export function apiKeyAuth(req: Request, res: Response, next: NextFunction): void {
-  // Skip auth in development if explicitly configured
-  if (isDev && appConfig.MCP_SKIP_AUTH) {
+  // Skip auth if explicitly configured (ensure network-level controls are in place)
+  if (appConfig.MCP_SKIP_AUTH) {
     next();
     return;
   }
