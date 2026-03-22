@@ -8,6 +8,8 @@ import type {
   HALogbookEntry,
   HAArea,
   HAEntityRegistryEntry,
+  HAAutomationConfig,
+  HADeviceRegistryEntry,
 } from "./types.js";
 
 const REQUEST_TIMEOUT_MS = 30_000;
@@ -35,7 +37,7 @@ async function haFetch<T>(
   const url = `${appConfig.HA_BASE_URL}${path}`;
 
   if (isDev) {
-    console.log(`[HA] ${options.method ?? "GET"} ${path}`);
+    process.stderr.write(`[HA] ${options.method ?? "GET"} ${path}\n`);
   }
 
   const controller = new AbortController();
@@ -244,6 +246,63 @@ export async function getEntityRegistry(): Promise<HAEntityRegistryEntry[]> {
   try {
     return await haFetch<HAEntityRegistryEntry[]>(
       "/api/config/entity_registry/list",
+    );
+  } catch {
+    return [];
+  }
+}
+
+// ── Automation Config CRUD ────────────────────────────────────
+
+export async function getAutomationConfig(
+  automationId: string,
+): Promise<HAAutomationConfig> {
+  return haFetch<HAAutomationConfig>(
+    `/api/config/automation/config/${automationId}`,
+  );
+}
+
+export async function createAutomation(
+  automationId: string,
+  config: HAAutomationConfig,
+): Promise<{ result: string }> {
+  return haFetch<{ result: string }>(
+    `/api/config/automation/config/${automationId}`,
+    {
+      method: "POST",
+      body: JSON.stringify(config),
+    },
+  );
+}
+
+export async function updateAutomation(
+  automationId: string,
+  config: HAAutomationConfig,
+): Promise<{ result: string }> {
+  // HA uses POST for both create and update on this endpoint
+  return createAutomation(automationId, config);
+}
+
+export async function deleteAutomation(
+  automationId: string,
+): Promise<{ result: string }> {
+  return haFetch<{ result: string }>(
+    `/api/config/automation/config/${automationId}`,
+    { method: "DELETE" },
+  );
+}
+
+export async function listAutomations(): Promise<HAEntityState[]> {
+  const states = await getStates();
+  return states.filter((s) => s.entity_id.startsWith("automation."));
+}
+
+// ── Device Registry ──────────────────────────────────────────
+
+export async function getDeviceRegistry(): Promise<HADeviceRegistryEntry[]> {
+  try {
+    return await haFetch<HADeviceRegistryEntry[]>(
+      "/api/config/device_registry/list",
     );
   } catch {
     return [];

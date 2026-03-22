@@ -4,7 +4,7 @@ import { randomBytes } from "node:crypto";
 import { writeFileSync, existsSync, readFileSync } from "node:fs";
 import { resolve } from "node:path";
 
-config();
+config({ quiet: true });
 
 const configSchema = z.object({
   MCP_API_KEY: z.string().min(1, "MCP_API_KEY is required"),
@@ -28,8 +28,9 @@ function ensureApiKey(): string {
 
   // Generate a new 256-bit key
   const newKey = randomBytes(32).toString("hex");
-  console.log("Generated new MCP API key. Add this to your MCP client configuration.");
-  console.log(`MCP_API_KEY=${newKey}`);
+  // Use stderr to avoid corrupting stdio JSON-RPC transport
+  process.stderr.write("Generated new MCP API key. Add this to your MCP client configuration.\n");
+  process.stderr.write(`MCP_API_KEY=${newKey}\n`);
 
   // Append to .env if it exists, or create it
   if (existsSync(envPath)) {
@@ -54,14 +55,14 @@ function loadConfig(): AppConfig {
     const errors = result.error.issues
       .map((issue) => `  ${issue.path.join(".")}: ${issue.message}`)
       .join("\n");
-    console.error("Configuration errors:\n" + errors);
+    process.stderr.write("Configuration errors:\n" + errors + "\n");
     process.exit(1);
   }
 
   const cfg = result.data;
 
   if (cfg.MCP_SKIP_AUTH && cfg.NODE_ENV === "production") {
-    console.error("MCP_SKIP_AUTH cannot be true in production.");
+    process.stderr.write("MCP_SKIP_AUTH cannot be true in production.\n");
     process.exit(1);
   }
 

@@ -7,6 +7,7 @@ import { registerAutomationTools } from "./automation.js";
 import { registerCoverLockTools } from "./covers-locks.js";
 import { registerSensorTools } from "./sensors.js";
 import { registerSystemTools } from "./system.js";
+import { registerDeviceTools } from "./devices.js";
 
 /**
  * Register all tool modules with the MCP server.
@@ -22,4 +23,5 @@ export function registerAllTools(server: McpServer): void {
   registerCoverLockTools(server);
   registerSensorTools(server);
   registerSystemTools(server);
+  registerDeviceTools(server);
 }

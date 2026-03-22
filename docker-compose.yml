@@ -1,17 +1,19 @@
 services:
   ha-mcp:
-    image: ghcr.io/${GITHUB_REPO:-your-username/home-assistant-mcp}:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: home-assistant-mcp:latest
     container_name: ha-mcp
     restart: unless-stopped
     ports:
       - "127.0.0.1:3000:3000"
+    env_file:
+      - .env.production
     environment:
       NODE_ENV: production
       MCP_PORT: "3000"
-      MCP_HOST: "0.0.0.0"    # Listen on all interfaces inside the container
-      MCP_API_KEY: ${MCP_API_KEY}
-      HA_BASE_URL: ${HA_BASE_URL:-http://host.docker.internal:8123}
-      HA_TOKEN: ${HA_TOKEN}
+      MCP_HOST: "0.0.0.0"
     extra_hosts:
       # Allows the container to reach HA on the host
       - "host.docker.internal:host-gateway"

@@ -100,6 +100,48 @@ export interface HAServiceCallResult {
   states?: HAEntityState[];
 }
 
+// ── Automation Config ────────────────────────────────────────
+
+/** HA automation configs are very flexible - triggers, conditions, and actions
+ *  can contain arbitrary keys depending on the platform/integration. */
+export type HAAutomationTrigger = Record<string, unknown>;
+export type HAAutomationCondition = Record<string, unknown>;
+export type HAAutomationAction = Record<string, unknown>;
+
+export interface HAAutomationConfig {
+  id?: string;
+  alias?: string;
+  description?: string;
+  mode?: "single" | "restart" | "queued" | "parallel";
+  triggers?: HAAutomationTrigger[];
+  conditions?: HAAutomationCondition[];
+  actions?: HAAutomationAction[];
+  /** Also accepts legacy singular forms from the API */
+  trigger?: HAAutomationTrigger | HAAutomationTrigger[];
+  condition?: HAAutomationCondition | HAAutomationCondition[];
+  action?: HAAutomationAction | HAAutomationAction[];
+}
+
+// ── Device Registry ──────────────────────────────────────────
+
+export interface HADeviceRegistryEntry {
+  id: string;
+  name: string | null;
+  name_by_user: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  model_id: string | null;
+  sw_version: string | null;
+  hw_version: string | null;
+  area_id: string | null;
+  disabled_by: string | null;
+  entry_type: string | null;
+  via_device_id: string | null;
+  configuration_url: string | null;
+  identifiers: Array<[string, string]>;
+  connections: Array<[string, string]>;
+}
+
 /** Describes a before/after state pair for tool responses */
 export interface StateChange {
   entity_id: string;

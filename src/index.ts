@@ -1,4 +1,7 @@
 import express from "express";
+import { createServer as createHttpsServer } from "node:https";
+import { readFileSync, existsSync } from "node:fs";
+import { resolve } from "node:path";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { appConfig, isDev } from "./config.js";
@@ -8,25 +11,31 @@ import { registerAllResources } from "./resources/index.js";
 import { checkConnection } from "./ha/client.js";
 import { randomUUID } from "node:crypto";
 
-// ── MCP Server Setup ──────────────────────────────────────────
+// ── MCP Server Factory ────────────────────────────────────────
+// Each session needs its own McpServer instance, as the SDK binds
+// one server to one transport. This factory creates a fresh,
+// fully-configured server for each new session.
 
-const mcpServer = new McpServer(
-  {
-    name: "home-assistant-mcp",
-    version: "0.1.0",
-  },
-  {
-    capabilities: {
-      tools: {},
-      resources: {},
-      logging: {},
+function createMcpServer(): McpServer {
+  const server = new McpServer(
+    {
+      name: "home-assistant-mcp",
+      version: "0.1.0",
     },
-  },
-);
+    {
+      capabilities: {
+        tools: {},
+        resources: {},
+        logging: {},
+      },
+    },
+  );
 
-// Register all tools and resources
-registerAllTools(mcpServer);
-registerAllResources(mcpServer);
+  registerAllTools(server);
+  registerAllResources(server);
+
+  return server;
+}
 
 // ── Transport & Session Management ────────────────────────────
 
@@ -77,18 +86,20 @@ app.post("/mcp", async (req, res) => {
       }
     };
 
-    // Connect server to transport
+    // Create a fresh server instance for this session and connect
+    const mcpServer = createMcpServer();
     await mcpServer.connect(transport);
 
-    if (isDev && transport.sessionId) {
-      console.log(`[MCP] New session: ${transport.sessionId}`);
-    }
+    // handleRequest processes the initialize message and assigns the session ID
+    await transport.handleRequest(req, res, req.body);
 
+    // Store the transport AFTER handleRequest, when the session ID has been assigned
     if (transport.sessionId) {
       transports.set(transport.sessionId, transport);
+      if (isDev) {
+        console.log(`[MCP] New session: ${transport.sessionId}`);
+      }
     }
-
-    await transport.handleRequest(req, res, req.body);
   } catch (error) {
     console.error("[MCP] Error handling POST:", error);
     if (!res.headersSent) {
@@ -154,17 +165,44 @@ async function start(): Promise<void> {
     console.log(`[HA] Connected to Home Assistant at ${appConfig.HA_BASE_URL}`);
   }
 
-  app.listen(appConfig.MCP_PORT, appConfig.MCP_HOST, () => {
-    console.log(
-      `[MCP] Server listening on http://${appConfig.MCP_HOST}:${appConfig.MCP_PORT}/mcp`,
+  // Check if TLS certs are available (dev HTTPS or production with Node-native TLS)
+  const certPath = resolve(process.cwd(), "certs/dev.crt");
+  const keyPath = resolve(process.cwd(), "certs/dev.key");
+  const useTls = existsSync(certPath) && existsSync(keyPath);
+
+  if (useTls) {
+    const httpsServer = createHttpsServer(
+      {
+        cert: readFileSync(certPath),
+        key: readFileSync(keyPath),
+      },
+      app,
     );
-    if (isDev) {
-      console.log("[MCP] Running in development mode");
-      if (appConfig.MCP_SKIP_AUTH) {
-        console.warn("[MCP] API key authentication is DISABLED");
+
+    httpsServer.listen(appConfig.MCP_PORT, appConfig.MCP_HOST, () => {
+      console.log(
+        `[MCP] Server listening on https://${appConfig.MCP_HOST}:${appConfig.MCP_PORT}/mcp`,
+      );
+      if (isDev) {
+        console.log("[MCP] Running in development mode (HTTPS)");
+        if (appConfig.MCP_SKIP_AUTH) {
+          console.warn("[MCP] API key authentication is DISABLED");
+        }
       }
-    }
-  });
+    });
+  } else {
+    app.listen(appConfig.MCP_PORT, appConfig.MCP_HOST, () => {
+      console.log(
+        `[MCP] Server listening on http://${appConfig.MCP_HOST}:${appConfig.MCP_PORT}/mcp`,
+      );
+      if (isDev) {
+        console.log("[MCP] Running in development mode (HTTP -- no certs found)");
+        if (appConfig.MCP_SKIP_AUTH) {
+          console.warn("[MCP] API key authentication is DISABLED");
+        }
+      }
+    });
+  }
 }
 
 start().catch((error) => {
