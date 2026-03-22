@@ -62,8 +62,9 @@ function loadConfig(): AppConfig {
   const cfg = result.data;
 
   if (cfg.MCP_SKIP_AUTH && cfg.NODE_ENV === "production") {
-    process.stderr.write("MCP_SKIP_AUTH cannot be true in production.\n");
-    process.exit(1);
+    process.stderr.write(
+      "[WARN] MCP_SKIP_AUTH is enabled in production. Ensure network-level access control (e.g. nginx subnet restriction) is in place.\n",
+    );
   }
 
   return cfg;
