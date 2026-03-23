@@ -244,8 +244,10 @@ export async function getAreas(): Promise<HAArea[]> {
 
 export async function getEntityRegistry(): Promise<HAEntityRegistryEntry[]> {
   try {
+    // Newer HA versions require POST for config registry endpoints
     return await haFetch<HAEntityRegistryEntry[]>(
       "/api/config/entity_registry/list",
+      { method: "POST" },
     );
   } catch {
     return [];
