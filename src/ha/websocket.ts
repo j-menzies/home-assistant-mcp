@@ -233,33 +233,6 @@ export async function getExposedEntities(): Promise<{
   return sendCommand("homeassistant/expose_entity/list");
 }
 
-// ── Entity Registry (WebSocket version) ───────────────────────
-
-export interface WSEntityRegistryEntry {
-  entity_id: string;
-  name: string | null;
-  original_name: string | null;
-  platform: string;
-  device_id: string | null;
-  area_id: string | null;
-  disabled_by: string | null;
-  hidden_by: string | null;
-  entity_category: string | null;
-  options: Record<string, unknown> | null;
-}
-
-/**
- * List all entities from the entity registry via WebSocket.
- * More reliable than the REST endpoint in newer HA versions.
- */
-export async function getEntityRegistryWS(): Promise<
-  WSEntityRegistryEntry[]
-> {
-  return sendCommand<WSEntityRegistryEntry[]>(
-    "config/entity_registry/list",
-  );
-}
-
 /**
  * Close the WebSocket connection gracefully.
  */

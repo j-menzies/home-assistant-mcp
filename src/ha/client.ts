@@ -1,4 +1,5 @@
 import { appConfig, isDev } from "../config.js";
+import { sendCommand } from "./websocket.js";
 import type {
   HAEntityState,
   HAServiceDomain,
@@ -230,28 +231,14 @@ export async function fireEvent(
   return result.message;
 }
 
-// ── Areas & Entity Registry (via WebSocket-like REST endpoints) ──
+// ── Areas & Entity Registry (WebSocket-only in HA) ────────────
 
 export async function getAreas(): Promise<HAArea[]> {
-  // The areas endpoint is available in newer HA versions
-  // Falls back gracefully if not available
-  try {
-    return await haFetch<HAArea[]>("/api/config/area_registry/list");
-  } catch {
-    return [];
-  }
+  return sendCommand<HAArea[]>("config/area_registry/list");
 }
 
 export async function getEntityRegistry(): Promise<HAEntityRegistryEntry[]> {
-  try {
-    // Newer HA versions require POST for config registry endpoints
-    return await haFetch<HAEntityRegistryEntry[]>(
-      "/api/config/entity_registry/list",
-      { method: "POST" },
-    );
-  } catch {
-    return [];
-  }
+  return sendCommand<HAEntityRegistryEntry[]>("config/entity_registry/list");
 }
 
 // ── Automation Config CRUD ────────────────────────────────────
@@ -302,13 +289,7 @@ export async function listAutomations(): Promise<HAEntityState[]> {
 // ── Device Registry ──────────────────────────────────────────
 
 export async function getDeviceRegistry(): Promise<HADeviceRegistryEntry[]> {
-  try {
-    return await haFetch<HADeviceRegistryEntry[]>(
-      "/api/config/device_registry/list",
-    );
-  } catch {
-    return [];
-  }
+  return sendCommand<HADeviceRegistryEntry[]>("config/device_registry/list");
 }
 
 // ── Health Check ──────────────────────────────────────────────

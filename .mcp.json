@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "home-assistant": {
+      "type": "http",
+      "url": "https://192.168.1.33/mcp",
+      "headers": {
+        "Authorization": "Bearer ${HA_MCP_API_KEY}"
+      }
+    }
+  }
+}

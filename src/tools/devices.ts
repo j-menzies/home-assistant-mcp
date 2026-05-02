@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import * as ha from "../ha/client.js";
+import { sendCommand } from "../ha/websocket.js";
 import { toolResponse, withErrorHandling } from "./helpers.js";
 
 export function registerDeviceTools(server: McpServer): void {
@@ -222,6 +223,37 @@ export function registerDeviceTools(server: McpServer): void {
       return toolResponse(
         `Found ${areas.length} areas:`,
         areas.map((a) => ({ area_id: a.area_id, name: a.name })),
+      );
+    }),
+  );
+
+  // ── set_device_area ─────────────────────────────────────────
+
+  server.tool(
+    "set_device_area",
+    "Assign a device to an area/room in Home Assistant. Use get_devices to find device IDs and get_areas to find area IDs.",
+    {
+      device_id: z.string().describe("The device ID to update"),
+      area_id: z
+        .string()
+        .describe("The area ID to assign (e.g. 'living_room', 'kitchen'). Use empty string to unassign."),
+    },
+    withErrorHandling(async (args) => {
+      const deviceId = args["device_id"] as string;
+      const areaId = args["area_id"] as string;
+
+      const result = await sendCommand<Record<string, unknown>>(
+        "config/device_registry/update",
+        {
+          device_id: deviceId,
+          area_id: areaId || null,
+        },
+      );
+
+      const name = (result?.name as string) ?? (result?.name_by_user as string) ?? deviceId;
+      return toolResponse(
+        `Updated device "${name}" area to "${areaId || "unassigned"}":`,
+        { device_id: deviceId, area_id: areaId || null, name },
       );
     }),
   );
