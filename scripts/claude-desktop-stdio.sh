@@ -47,9 +47,13 @@ fi
 log "[wrapper] Using node: $(command -v node) ($(node --version))"
 
 # Build if dist/stdio.js is missing or older than source
+# Redirect both stdout and stderr to the wrapper's stderr so npm/tsc output
+# (warnings, ANSI-coloured error messages) never leaks onto stdout, which
+# Claude Desktop reads as JSON-RPC. Order matters: `>&2 2>&1` first points
+# stdout at stderr, then aliases stderr to the new stdout target.
 if [ ! -f "$DIR/dist/stdio.js" ] || [ "$DIR/src/stdio.ts" -nt "$DIR/dist/stdio.js" ]; then
   log "[wrapper] Building TypeScript..."
-  npx tsc 2>&1 >&2
+  npx tsc >&2 2>&1
 fi
 
 # Run the compiled server directly with node -- no tsx, no npx noise
